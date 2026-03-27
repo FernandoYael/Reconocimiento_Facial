@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SAIK - Checador Facial</title>
+
+<style>
+
+body{
+font-family:'Segoe UI',Tahoma,sans-serif;
+background:linear-gradient(135deg,#e3f2fd,#f4f7fb);
+margin:0;
+color:#333;
+}
+
+header{
+background:linear-gradient(90deg,#0d47a1,#1a237e);
+color:white;
+padding:20px;
+text-align:center;
+box-shadow:0 2px 10px rgba(0,0,0,0.2);
+}
+
+header h1{
+margin:0;
+font-size:26px;
+}
+
+.clock{
+font-size:18px;
+margin-top:5px;
+opacity:.9;
+}
+
+.container{
+width:90%;
+max-width:950px;
+margin:30px auto;
+background:white;
+padding:25px;
+border-radius:12px;
+box-shadow:0 6px 20px rgba(0,0,0,.15);
+transition:.3s;
+}
+
+.container:hover{
+transform:translateY(-3px);
+}
+
+h2{
+text-align:center;
+color:#0d47a1;
+margin-bottom:20px;
+}
+
+.btn{
+background:linear-gradient(90deg,#1565c0,#1a237e);
+color:white;
+padding:12px 18px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+margin:8px;
+font-size:14px;
+transition:.3s;
+}
+
+.btn:hover{
+background:linear-gradient(90deg,#1e88e5,#3949ab);
+transform:scale(1.05);
+}
+
+.hidden{
+display:none;
+}
+
+input,select{
+padding:10px;
+width:96%;
+margin:6px 0;
+border-radius:6px;
+border:1px solid #ccc;
+font-size:14px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:15px;
+}
+
+th{
+background:#1a237e;
+color:white;
+padding:10px;
+}
+
+td{
+padding:8px;
+border:1px solid #ddd;
+}
+
+video{
+width:320px;
+border-radius:8px;
+border:3px solid #1a237e;
+margin-top:10px;
+}
+
+.small{
+font-size:13px;
+color:#666;
+margin-top:10px;
+text-align:center;
+}
+
+#calendario span{
+display:inline-block;
+width:30px;
+height:30px;
+line-height:30px;
+margin:2px;
+border-radius:4px;
+background:#e0e0e0;
+}
+
+#calendario .hoy{
+background:#1a237e;
+color:white;
+font-weight:bold;
+}
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+</head>
+
+<body>
+
+<header>
+<h1>SAIK - Checador Facial</h1>
+<div class="clock" id="clock"></div>
+</header>
+
+<div class="container" id="menuPrincipal">
+
+<h2>Menú Principal</h2>
+
+<button class="btn" onclick="showSection('registroEmpleado')">
+Dar de Alta Empleado
+</button>
+
+<button class="btn" onclick="showSection('checador')">
+Checador Entrada / Salida
+</button>
+
+<button class="btn" onclick="showSection('loginAdmin')">
+Acceso Administrador
+</button>
+
+<div class="small">
+Modelos cargados: <span id="modelStatus">cargando...</span>
+</div>
+
+</div>
+
+
+<div class="container hidden" id="registroEmpleado">
+
+<h2>Registro de Empleado</h2>
+
+<input type="text" id="nombreEmpleado" placeholder="Nombre del Empleado">
+
+<label>Horario:</label>
+
+<select id="horarioEmpleado">
+<option value="08:00-16:00">08:00 - 16:00</option>
+<option value="09:00-17:00">09:00 - 17:00</option>
+<option value="10:00-18:00">10:00 - 18:00</option>
+</select>
+
+<label>Foto del Empleado</label>
+
+<br>
+
+<video id="videoRegistro" autoplay muted></video>
+
+<canvas id="canvasRegistro" class="hidden"></canvas>
+
+<br>
+
+<button class="btn" onclick="capturarFotoRegistro()">
+Capturar Foto
+</button>
+
+<button class="btn" onclick="registrarEmpleado()">
+Registrar
+</button>
+
+<button class="btn" onclick="showSection('menuPrincipal')">
+Volver
+</button>
+
+</div>
+
+
+<div class="container hidden" id="checador">
+
+<h2>Checador de Entrada / Salida</h2>
+
+<video id="video" autoplay muted></video>
+
+<canvas id="canvas" class="hidden"></canvas>
+
+<br>
+
+<button class="btn" onclick="tomarAsistencia('entrada')">
+Registrar Entrada
+</button>
+
+<button class="btn" onclick="tomarAsistencia('salida')">
+Registrar Salida
+</button>
+
+<button class="btn" onclick="showSection('menuPrincipal')">
+Volver
+</button>
+
+<div id="resultado"></div>
+
+</div>
+
+
+<div class="container hidden" id="loginAdmin">
+
+<h2>Login Administrador</h2>
+
+<input type="text" id="usuarioAdmin" placeholder="Usuario">
+
+<input type="password" id="passAdmin" placeholder="Contraseña">
+
+<button class="btn" onclick="loginAdmin()">
+Entrar
+</button>
+
+<button class="btn" onclick="showSection('menuPrincipal')">
+Volver
+</button>
+
+</div>
+
+
+<div class="container hidden" id="adminPanel">
+
+<h2>Panel de Administración</h2>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Empleado</th>
+<th>No. Empleado</th>
+<th>Horario</th>
+<th>Fecha</th>
+<th>Entrada</th>
+<th>Salida</th>
+<th>Horas</th>
+<th>8 hrs</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tablaRegistros"></tbody>
+
+</table>
+
+<button class="btn" onclick="exportarExcel()">
+Exportar a Excel
+</button>
+
+<div id="calendario"></div>
+
+<button class="btn" onclick="showSection('menuPrincipal')">
+Cerrar Sesión
+</button>
+
+</div>
+
+
+<script>
+
+const MODEL_URL='https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'
+
+const RECOGNITION_THRESHOLD=0.55
+
+let empleados=JSON.parse(localStorage.getItem("empleados"))||[]
+
+let registros=JSON.parse(localStorage.getItem("registros"))||[]
+
+
+async function iniciarCamara(id){
+
+const stream=await navigator.mediaDevices.getUserMedia({video:true})
+
+document.getElementById(id).srcObject=stream
+
+}
+
+iniciarCamara("video")
+iniciarCamara("videoRegistro")
+
+
+function showSection(id){
+
+document.querySelectorAll(".container").forEach(c=>c.classList.add("hidden"))
+
+document.getElementById(id).classList.remove("hidden")
+
+}
+
+
+function reloj(){
+
+document.getElementById("clock").innerText=new Date().toLocaleTimeString()
+
+}
+
+setInterval(reloj,1000)
+
+
+function generarNumeroEmpleado(){
+
+return "2221"+Math.floor(1000+Math.random()*9000)
+
+}
+
+
+function fechaISO(){
+
+return new Date().toISOString().split("T")[0]
+
+}
+
+
+function hora(){
+
+return new Date().toTimeString().split(" ")[0]
+
+}
+
+
+async function loadModels(){
+
+await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
+
+await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+
+await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+
+document.getElementById("modelStatus").innerText="modelos cargados"
+
+}
+
+loadModels()
+
+
+async function capturarFotoRegistro(){
+
+const video=document.getElementById("videoRegistro")
+
+const canvas=document.getElementById("canvasRegistro")
+
+const ctx=canvas.getContext("2d")
+
+canvas.width=video.videoWidth
+
+canvas.height=video.videoHeight
+
+ctx.drawImage(video,0,0)
+
+const detection=await faceapi.detectSingleFace(canvas,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor()
+
+if(!detection){
+
+alert("No se detectó rostro")
+
+return
+
+}
+
+window._temp={
+
+foto:canvas.toDataURL(),
+
+descriptor:Array.from(detection.descriptor)
+
+}
+
+alert("Foto capturada")
+
+}
+
+
+function registrarEmpleado(){
+
+const nombre=document.getElementById("nombreEmpleado").value
+
+const horario=document.getElementById("horarioEmpleado").value
+
+if(!nombre||!window._temp){
+
+alert("Faltan datos")
+
+return
+
+}
+
+const numero=generarNumeroEmpleado()
+
+empleados.push({
+
+numero,
+
+nombre,
+
+horario,
+
+foto:window._temp.foto,
+
+descriptor:window._temp.descriptor
+
+})
+
+localStorage.setItem("empleados",JSON.stringify(empleados))
+
+alert("Empleado registrado")
+
+showSection("menuPrincipal")
+
+}
+
+
+function euclidean(a,b){
+
+let s=0
+
+for(let i=0;i<a.length;i++){
+
+let d=a[i]-b[i]
+
+s+=d*d
+
+}
+
+return Math.sqrt(s)
+
+}
+
+
+async function detectar(video){
+
+const canvas=document.getElementById("canvas")
+
+const ctx=canvas.getContext("2d")
+
+canvas.width=video.videoWidth
+
+canvas.height=video.videoHeight
+
+ctx.drawImage(video,0,0)
+
+const d=await faceapi.detectSingleFace(canvas,new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor()
+
+if(!d)return null
+
+return d.descriptor
+
+}
+
+
+async function tomarAsistencia(tipo){
+
+const video=document.getElementById("video")
+
+const live=await detectar(video)
+
+if(!live){
+
+alert("No se detectó rostro")
+
+return
+
+}
+
+let match=null
+
+let dist=Infinity
+
+empleados.forEach(e=>{
+
+let d=euclidean(live,e.descriptor)
+
+if(d<dist){
+
+dist=d
+
+match=e
+
+}
+
+})
+
+if(!match||dist>RECOGNITION_THRESHOLD){
+
+alert("Empleado no reconocido")
+
+return
+
+}
+
+let hoy=fechaISO()
+
+let reg=registros.find(r=>r.numero===match.numero&&r.fecha===hoy)
+
+if(tipo==="entrada"){
+
+if(!reg){
+
+reg={
+
+numero:match.numero,
+
+nombre:match.nombre,
+
+horario:match.horario,
+
+fecha:hoy,
+
+entrada:hora(),
+
+salida:""
+
+}
+
+registros.push(reg)
+
+}
+
+alert("Entrada registrada")
+
+}
+
+else{
+
+if(reg&&!reg.salida){
+
+reg.salida=hora()
+
+}
+
+alert("Salida registrada")
+
+}
+
+localStorage.setItem("registros",JSON.stringify(registros))
+
+cargarRegistros()
+
+}
+
+
+function loginAdmin(){
+
+let u=document.getElementById("usuarioAdmin").value
+
+let p=document.getElementById("passAdmin").value
+
+if(u==="admin"&&p==="1234"){
+
+showSection("adminPanel")
+
+cargarRegistros()
+
+mostrarCalendario()
+
+}else{
+
+alert("Credenciales incorrectas")
+
+}
+
+}
+
+
+function cargarRegistros(){
+
+let t=document.getElementById("tablaRegistros")
+
+t.innerHTML=""
+
+registros.forEach(r=>{
+
+t.innerHTML+=`<tr>
+
+<td>${r.nombre}</td>
+
+<td>${r.numero}</td>
+
+<td>${r.horario}</td>
+
+<td>${r.fecha||""}</td>
+
+<td>${r.entrada||""}</td>
+
+<td>${r.salida||""}</td>
+
+<td>${r.horas||""}</td>
+
+<td>${r.ochoHoras||""}</td>
+
+</tr>`
+
+})
+
+}
+
+
+function exportarExcel(){
+
+const wb=XLSX.utils.book_new()
+
+const ws=XLSX.utils.json_to_sheet(registros)
+
+XLSX.utils.book_append_sheet(wb,ws,"Registros")
+
+XLSX.writeFile(wb,"Asistencia.xlsx")
+
+}
+
+
+function mostrarCalendario(){
+
+const cal=document.getElementById("calendario")
+
+cal.innerHTML=""
+
+const hoy=new Date()
+
+for(let i=1;i<=31;i++){
+
+const span=document.createElement("span")
+
+span.innerText=i
+
+if(i===hoy.getDate())span.classList.add("hoy")
+
+cal.appendChild(span)
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
